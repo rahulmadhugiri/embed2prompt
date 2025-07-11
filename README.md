@@ -25,14 +25,6 @@ The convergence of these capabilities points toward a fundamental shift in how d
 
 This represents more than an incremental improvement in recommendation systems or content generation. It's an architectural foundation for AI that truly understands the geometric structure of human preferences and can generate accordingly, making possible experiences that are simultaneously deeply personal and infinitely creative.
 
-## What it does
-
-- Takes 1024-dimensional embedding vectors as input
-- Generates text prompts designed to produce similar embeddings
-- Processes requests individually or in parallel batches
-- Evaluates prompt quality by comparing embeddings
-- Handles OpenAI rate limiting automatically
-
 ## Setup
 
 ### Requirements

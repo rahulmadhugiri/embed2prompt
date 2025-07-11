@@ -1,0 +1,57 @@
+{
+  "basic_statistics": {
+    "total_samples": 52002,
+    "null_prompts": "0",
+    "null_outputs": "31",
+    "empty_prompts": "0",
+    "empty_outputs": "0",
+    "unique_prompts": 52002,
+    "unique_outputs": 50840,
+    "duplicate_prompts": 0,
+    "duplicate_outputs": 1162,
+    "avg_prompt_length": 59.7787585092881,
+    "avg_output_length": 270.4733986261569,
+    "avg_prompt_words": 10.06363216799354,
+    "avg_output_words": 44.209155105732044,
+    "min_prompt_length": "9",
+    "max_prompt_length": "489",
+    "min_output_length": 1.0,
+    "max_output_length": 4181.0
+  },
+  "prompt_analysis": {
+    "top_prompt_starters": {
+      "generate": 4691,
+      "create": 3796,
+      "describe": 2967,
+      "write": 2759,
+      "what": 2272,
+      "given": 2218,
+      "explain": 2018,
+      "name": 1963,
+      "identify": 1509,
+      "find": 1416,
+      "rewrite": 1225,
+      "list": 1088,
+      "suggest": 1050,
+      "give": 931,
+      "how": 927,
+      "classify": 891,
+      "provide": 876,
+      "summarize": 832,
+      "construct": 813,
+      "design": 762
+    },
+    "question_prompts": "3831",
+    "instruction_prompts": "22250",
+    "context_prompts": "3376",
+    "other_prompts": "25921"
+  },
+  "output_analysis": {
+    "code_outputs": "7108",
+    "list_outputs": "3699",
+    "explanation_outputs": "1264",
+    "avg_sentences_per_output": 4.0269573415943505,
+    "median_sentences_per_output": 3.0
+  },
+  "analysis_timestamp": "2025-07-10T17:49:25.246114"
+}

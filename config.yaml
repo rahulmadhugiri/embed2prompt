@@ -1,0 +1,90 @@
+# Embedding-to-Prompt Generation API Configuration
+
+# OpenAI Embedding Configuration
+openai:
+  embedding_model: "text-embedding-3-small"
+  embedding_dimensions: 1024
+  max_tokens_per_request: 8192
+  
+# Pinecone Configuration
+pinecone:
+  host: "https://vector-to-prompt-wzpymxc.svc.aped-4627-b74a.pinecone.io"
+  environment: "aped-4627-b74a"
+  index_name: "vector-to-prompt"
+  metric: "cosine"
+  dimensions: 1024
+  cloud: "aws"
+  region: "us-east-1"
+  capacity_mode: "serverless"
+  model_tag: "llama-text-embed-v2"
+
+# Model Configuration
+model:
+  architecture: "t5-small"  # Options: "mlp", "t5-small", "encoder-decoder"
+  max_prompt_length: 512
+  max_output_length: 256
+  hidden_size: 512
+  num_layers: 6
+  num_heads: 8
+  dropout: 0.1
+  
+# Training Configuration
+training:
+  batch_size: 32
+  learning_rate: 5e-5
+  num_epochs: 10
+  warmup_steps: 1000
+  weight_decay: 0.01
+  gradient_accumulation_steps: 4
+  save_steps: 1000
+  eval_steps: 500
+  max_grad_norm: 1.0
+  seed: 42
+  
+# Data Configuration
+data:
+  dataset_path: "data/alpaca_data.csv"
+  embeddings_cache_path: "data/embeddings/"
+  embeddings_format: "jsonl"  # Options: "jsonl", "parquet"
+  train_split: 0.8
+  val_split: 0.1
+  test_split: 0.1
+  max_samples: null  # null for all samples, or specify number for subset
+
+# API Configuration
+api:
+  host: "0.0.0.0"
+  port: 8000
+  debug: false
+  cors_origins: ["*"]
+  rate_limit: 100  # requests per minute
+  
+# Inference Configuration
+inference:
+  num_prompt_candidates: 5
+  refinement_strategy: "hill_climbing"  # Options: "simple", "hill_climbing", "evolutionary"
+  max_refinement_iterations: 3
+  temperature: 0.7
+  top_p: 0.9
+  
+# Evaluation Configuration
+evaluation:
+  similarity_threshold: 0.8
+  diversity_penalty: 0.1
+  quality_metrics: ["cosine_similarity", "diversity", "perplexity"]
+  
+# Logging Configuration
+logging:
+  level: "INFO"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  file: "logs/embedding_to_prompt.log"
+  max_file_size: "10MB"
+  backup_count: 5
+  
+# Deployment Configuration
+deployment:
+  container_port: 8000
+  workers: 4
+  timeout: 30
+  memory_limit: "2GB"
+  cpu_limit: "1000m" 

@@ -1,143 +1,125 @@
 #!/usr/bin/env python3
-"""
-Quick Example: Parallel Embedding-to-Prompt Processing
-This script demonstrates the parallel processing capabilities with 10 examples.
-"""
-
-import requests
+import asyncio
 import json
-import time
 import numpy as np
-from typing import List
+import time
+from typing import List, Dict, Any
 
-# Configuration
-API_URL = "http://localhost:8000"
-NUM_EMBEDDINGS = 10
+import sys
+sys.path.append('.')
+
+from scripts.async_processing import ParallelPromptGenerator, RateLimitTier
+from scripts.inference import EmbeddingToPromptInference
 
 
-def generate_sample_embeddings(num_samples: int = 10) -> List[List[float]]:
-    """Generate sample embeddings for demonstration."""
-    print(f"🎲 Generating {num_samples} sample embeddings...")
-    
+def create_test_embeddings(count: int = 10) -> List[List[float]]:
+    """Create random test embeddings for demonstration."""
+    np.random.seed(42)  # For reproducible results
     embeddings = []
-    
-    # Generate diverse embeddings
-    for i in range(num_samples):
-        # Create embeddings with different patterns
-        if i < 3:
-            # High values in first quarter
-            embedding = np.random.random(1024) * 0.5
-            embedding[:256] += 0.5
-        elif i < 6:
-            # High values in middle
-            embedding = np.random.random(1024) * 0.5
-            embedding[256:768] += 0.5
-        else:
-            # High values in last quarter
-            embedding = np.random.random(1024) * 0.5
-            embedding[768:] += 0.5
-        
+    for i in range(count):
+        # Create slightly varied embeddings around different centers
+        center = np.random.randn(1024) * 0.1
+        noise = np.random.randn(1024) * 0.01
+        embedding = center + noise
         embeddings.append(embedding.tolist())
-    
-    print(f"✅ Generated {len(embeddings)} embeddings")
     return embeddings
 
 
-def test_parallel_processing():
-    """Test the parallel processing endpoint."""
+async def run_parallel_example():
+    """Run parallel prompt generation example."""
     
-    print("🚀 Parallel Embedding-to-Prompt Processing Example")
-    print("=" * 60)
-    
-    # Check API health
-    print("🔍 Checking API health...")
+    # Load configuration
+    import yaml
     try:
-        response = requests.get(f"{API_URL}/health", timeout=10)
-        if response.status_code == 200:
-            health = response.json()
-            print(f"✅ API Status: {health['status']}")
-            print(f"✅ Model Loaded: {health['model_loaded']}")
-        else:
-            print(f"❌ API health check failed: {response.status_code}")
-            return
-    except Exception as e:
-        print(f"❌ Cannot connect to API: {e}")
-        print("Please make sure the API server is running on localhost:8000")
+        with open('config.yaml', 'r') as f:
+            config = yaml.safe_load(f)
+    except FileNotFoundError:
+        print("❌ config.yaml not found")
         return
     
-    # Generate sample embeddings
-    embeddings = generate_sample_embeddings(NUM_EMBEDDINGS)
+    # Initialize inference engine
+    model_path = "models/checkpoints/best_model.pt"
+    try:
+        inference_engine = EmbeddingToPromptInference(model_path)
+        print("✅ Inference engine initialized")
+    except Exception as e:
+        print(f"❌ Failed to initialize inference engine: {e}")
+        return
     
-    # Test parallel processing
-    print(f"\n🔄 Processing {NUM_EMBEDDINGS} embeddings in parallel...")
+    # Create test embeddings
+    test_embeddings = create_test_embeddings(10)
+    print(f"✅ Created {len(test_embeddings)} test embeddings")
     
-    payload = {
-        "embeddings": embeddings,
-        "max_concurrent": 5,
-        "rate_limit_tier": "tier_2",
-        "evaluate_quality": True,
-        "generate_variants": False,
-        "return_metadata": True
-    }
-    
-    start_time = time.time()
+    # Initialize parallel generator
+    try:
+        generator = ParallelPromptGenerator(
+            inference_engine=inference_engine,
+            config=config,
+            rate_limit_tier=RateLimitTier.TIER_2
+        )
+        print("✅ Parallel generator initialized")
+    except Exception as e:
+        print(f"❌ Failed to initialize parallel generator: {e}")
+        return
     
     try:
-        response = requests.post(
-            f"{API_URL}/generate_prompts_parallel",
-            json=payload,
-            timeout=300
+        # Run parallel processing
+        print("🔄 Starting parallel processing...")
+        start_time = time.time()
+        
+        results = await generator.generate_prompts_with_evaluation(
+            test_embeddings,
+            max_concurrent=5
         )
         
         processing_time = time.time() - start_time
         
-        if response.status_code == 200:
-            result = response.json()
-            
-            # Display results
-            print(f"✅ Processing completed in {processing_time:.2f}s")
-            print(f"📊 Summary:")
-            print(f"   Total processed: {result['summary']['total_processed']}")
-            print(f"   Successful: {result['summary']['successful']}")
-            print(f"   Failed: {result['summary']['failed']}")
-            print(f"   Server time: {result['summary']['processing_time']:.2f}s")
-            
-            # Show quality metrics if available
-            if result['summary'].get('average_similarity') is not None:
-                print(f"   Avg similarity: {result['summary']['average_similarity']:.3f}")
-                print(f"   Max similarity: {result['summary']['max_similarity']:.3f}")
-                print(f"   Min similarity: {result['summary']['min_similarity']:.3f}")
-            
-            # Show sample results
-            print(f"\n📝 Sample Results:")
-            for i, result_item in enumerate(result['results'][:3]):
-                print(f"\n   Sample {i+1}:")
-                prompt = result_item['original_prompt'][:80] + "..." if len(result_item['original_prompt']) > 80 else result_item['original_prompt']
-                print(f"   Prompt: {prompt}")
-                
-                if result_item['original_result'].get('similarity') is not None:
-                    similarity = result_item['original_result']['similarity']
-                    print(f"   Quality: {similarity:.3f}")
-            
-            # Show performance metrics
-            if 'metadata' in result:
-                perf = result['metadata']['performance_metrics']
-                print(f"\n⚡ Performance Metrics:")
-                print(f"   Requests/sec: {perf['requests_per_second']:.2f}")
-                print(f"   Avg time per request: {perf['average_processing_time']:.2f}s")
-                print(f"   Speedup from parallelization: ~{NUM_EMBEDDINGS/perf['average_processing_time']:.1f}x")
-            
-        else:
-            print(f"❌ Request failed: {response.status_code}")
-            print(f"Response: {response.text}")
-            
+        # Analyze results
+        successful = sum(1 for r in results if r.get('original_result', {}).get('success', False))
+        
+        print(f"✅ Processing completed in {processing_time:.2f}s")
+        print(f"📊 Results: {successful}/{len(test_embeddings)} successful")
+        
+        # Show sample results
+        if results:
+            print("\n📝 Sample results:")
+            for i, result in enumerate(results[:3]):
+                if result.get('original_result', {}).get('success'):
+                    prompt = result.get('original_prompt', '')
+                    similarity = result.get('original_result', {}).get('similarity', 0)
+                    print(f"  {i+1}. {prompt[:60]}... (similarity: {similarity:.3f})")
+        
+        # Performance metrics
+        if successful > 0:
+            avg_similarity = np.mean([
+                r.get('original_result', {}).get('similarity', 0) 
+                for r in results if r.get('original_result', {}).get('success', False)
+            ])
+            print(f"📈 Average similarity: {avg_similarity:.3f}")
+            print(f"⚡ Processing rate: {len(test_embeddings)/processing_time:.1f} embeddings/sec")
+        
     except Exception as e:
-        print(f"❌ Request failed: {e}")
+        print(f"❌ Parallel processing failed: {e}")
+    
+    finally:
+        # Cleanup
+        await generator.close()
+        print("🧹 Cleanup completed")
 
 
 def main():
-    """Main function."""
-    test_parallel_processing()
+    """Main function to run the parallel processing example."""
+    print("🚀 Parallel Embedding-to-Prompt Generation Example")
+    print("=" * 50)
+    
+    try:
+        asyncio.run(run_parallel_example())
+    except KeyboardInterrupt:
+        print("\n⚠️ Interrupted by user")
+    except Exception as e:
+        print(f"❌ Error: {e}")
+    
+    print("\n✅ Example completed!")
 
 
 if __name__ == "__main__":

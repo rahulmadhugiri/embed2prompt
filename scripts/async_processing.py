@@ -25,31 +25,76 @@ logger = logging.getLogger(__name__)
 
 class RateLimitTier(Enum):
     """OpenAI API rate limit tiers."""
-    TIER_1 = "tier_1"  # 3 RPM, 200 RPD
-    TIER_2 = "tier_2"  # 3,500 RPM, 10,000 RPD
-    TIER_3 = "tier_3"  # 5,000 RPM, 10,000 RPD
-    TIER_4 = "tier_4"  # 10,000 RPM, 30,000 RPD
-    TIER_5 = "tier_5"  # 30,000 RPM, 100,000 RPD
+    FREE = "free"       # 100 RPM, 2,000 RPD, 40,000 TPM
+    TIER_1 = "tier_1"   # 3,000 RPM, 1,000,000 TPM, 3,000,000 batch queue
+    TIER_2 = "tier_2"   # 5,000 RPM, 1,000,000 TPM, 20,000,000 batch queue  
+    TIER_3 = "tier_3"   # 5,000 RPM, 5,000,000 TPM, 100,000,000 batch queue
+    TIER_4 = "tier_4"   # 10,000 RPM, 5,000,000 TPM, 500,000,000 batch queue
+    TIER_5 = "tier_5"   # 10,000 RPM, 10,000,000 TPM, 4,000,000,000 batch queue
 
 
 @dataclass
 class RateLimitConfig:
-    """Configuration for rate limiting."""
+    """Configuration for OpenAI API rate limiting."""
     requests_per_minute: int
-    requests_per_day: int
+    requests_per_day: Optional[int]
     tokens_per_minute: int
-    tokens_per_day: int
-    concurrent_requests: int = 10
+    tokens_per_day: Optional[int]
+    concurrent_requests: int
+    batch_queue_limit: Optional[int]
     
     @classmethod
-    def from_tier(cls, tier: RateLimitTier) -> 'RateLimitConfig':
-        """Create config from OpenAI tier."""
+    def from_tier(cls, tier: RateLimitTier) -> "RateLimitConfig":
+        """Create rate limit config from OpenAI tier."""
         configs = {
-            RateLimitTier.TIER_1: cls(3, 200, 40000, 5000000, 3),
-            RateLimitTier.TIER_2: cls(3500, 10000, 90000, 10000000, 50),
-            RateLimitTier.TIER_3: cls(5000, 10000, 90000, 10000000, 100),
-            RateLimitTier.TIER_4: cls(10000, 30000, 150000, 30000000, 200),
-            RateLimitTier.TIER_5: cls(30000, 100000, 300000, 100000000, 500),
+            RateLimitTier.FREE: cls(
+                requests_per_minute=100,
+                requests_per_day=2000,
+                tokens_per_minute=40000,
+                tokens_per_day=None,
+                concurrent_requests=5,
+                batch_queue_limit=None
+            ),
+            RateLimitTier.TIER_1: cls(
+                requests_per_minute=3000,
+                requests_per_day=None,
+                tokens_per_minute=1000000,
+                tokens_per_day=None,
+                concurrent_requests=20,
+                batch_queue_limit=3000000
+            ),
+            RateLimitTier.TIER_2: cls(
+                requests_per_minute=5000,
+                requests_per_day=None,
+                tokens_per_minute=1000000,
+                tokens_per_day=None,
+                concurrent_requests=30,
+                batch_queue_limit=20000000
+            ),
+            RateLimitTier.TIER_3: cls(
+                requests_per_minute=5000,
+                requests_per_day=None,
+                tokens_per_minute=5000000,
+                tokens_per_day=None,
+                concurrent_requests=50,
+                batch_queue_limit=100000000
+            ),
+            RateLimitTier.TIER_4: cls(
+                requests_per_minute=10000,
+                requests_per_day=None,
+                tokens_per_minute=5000000,
+                tokens_per_day=None,
+                concurrent_requests=100,
+                batch_queue_limit=500000000
+            ),
+            RateLimitTier.TIER_5: cls(
+                requests_per_minute=10000,
+                requests_per_day=None,
+                tokens_per_minute=10000000,
+                tokens_per_day=None,
+                concurrent_requests=200,
+                batch_queue_limit=4000000000
+            ),
         }
         return configs[tier]
 

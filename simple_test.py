@@ -1,157 +1,124 @@
 #!/usr/bin/env python3
-"""
-Simple test using requests to call OpenAI API directly
-"""
-
-import csv
-import json
+import sys
 import os
-import requests
-from dotenv import load_dotenv
+import json
 import time
+import requests
+from typing import Dict, Any
 
-# Load environment variables
-load_dotenv()
+sys.path.append('.')
+
+API_BASE_URL = "http://localhost:8000"
+
+
+def test_api_health() -> bool:
+    try:
+        response = requests.get(f"{API_BASE_URL}/health", timeout=5)
+        return response.status_code == 200
+    except Exception:
+        return False
+
+
+def test_single_prompt_generation() -> Dict[str, Any]:
+    test_embedding = [0.1] * 1024  # Simple test embedding
+    
+    try:
+        response = requests.post(
+            f"{API_BASE_URL}/generate_prompt",
+            json={
+                "target_embedding": test_embedding,
+                "return_metadata": True
+            },
+            timeout=30
+        )
+        
+        if response.status_code == 200:
+            return {"success": True, "data": response.json()}
+        else:
+            return {"success": False, "error": f"HTTP {response.status_code}"}
+            
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+def test_text_to_prompt() -> Dict[str, Any]:
+    try:
+        response = requests.post(
+            f"{API_BASE_URL}/generate_prompt_from_text",
+            json={
+                "text": "How to build a web application",
+                "return_metadata": True
+            },
+            timeout=30
+        )
+        
+        if response.status_code == 200:
+            return {"success": True, "data": response.json()}
+        else:
+            return {"success": False, "error": f"HTTP {response.status_code}"}
+            
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+def test_batch_processing() -> Dict[str, Any]:
+    test_embeddings = [[0.1] * 1024, [0.2] * 1024, [0.3] * 1024]
+    
+    try:
+        response = requests.post(
+            f"{API_BASE_URL}/generate_prompts_batch",
+            json={
+                "embeddings": test_embeddings,
+                "return_metadata": True
+            },
+            timeout=60
+        )
+        
+        if response.status_code == 200:
+            return {"success": True, "data": response.json()}
+        else:
+            return {"success": False, "error": f"HTTP {response.status_code}"}
+            
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
 
 def main():
-    print("🧪 Testing Embedding Generation with Direct API Calls")
-    print("=" * 60)
+    print("Testing Embedding-to-Prompt API")
     
-    # Get API key
-    api_key = os.getenv('OPENAI_API_KEY')
-    if not api_key or api_key == 'your_openai_api_key_here':
-        print("❌ OpenAI API key not found in .env file")
+    # Test API health
+    if not test_api_health():
+        print("❌ API health check failed. Please start the server.")
         return
+    print("✅ API health check passed")
     
-    # Read first 10 outputs from dataset
-    outputs = []
-    prompts = []
-    
-    print("📖 Reading dataset...")
-    with open('data/alpaca_data.csv', 'r', encoding='utf-8') as file:
-        reader = csv.DictReader(file)
-        for i, row in enumerate(reader):
-            if i >= 10:  # Only first 10
-                break
-            outputs.append(row['output'])
-            prompts.append(row['prompt'])
-    
-    print(f"✅ Loaded {len(outputs)} outputs")
-    
-    # Generate embeddings using direct API calls
-    print("\n🔄 Generating embeddings...")
-    embeddings = []
-    
-    headers = {
-        'Authorization': f'Bearer {api_key}',
-        'Content-Type': 'application/json'
-    }
-    
-    for i, output in enumerate(outputs):
-        print(f"  Processing {i+1}/10: {output[:50]}...")
-        
-        try:
-            response = requests.post(
-                'https://api.openai.com/v1/embeddings',
-                headers=headers,
-                json={
-                    'input': output,
-                    'model': 'text-embedding-3-small',
-                    'dimensions': 1024  # Reduce to 1024 to match Pinecone index
-                }
-            )
-            
-            if response.status_code == 200:
-                data = response.json()
-                embedding = data['data'][0]['embedding']
-                embeddings.append({
-                    'id': f'test-{i}',
-                    'embedding': embedding,
-                    'prompt': prompts[i],
-                    'output': output,
-                    'tokens': data.get('usage', {}).get('total_tokens', 0)
-                })
-                print(f"    ✅ Generated {len(embedding)}-dimensional embedding")
-            else:
-                print(f"    ❌ API error: {response.status_code} - {response.text}")
-                return
-            
-            # Small delay to be nice to API
-            time.sleep(0.1)
-            
-        except Exception as e:
-            print(f"❌ Error generating embedding {i+1}: {e}")
-            return
-    
-    print(f"✅ Generated {len(embeddings)} embeddings")
-    
-    # Save embeddings to file
-    print("\n💾 Saving embeddings to file...")
-    with open('test_embeddings.json', 'w') as f:
-        json.dump(embeddings, f, indent=2)
-    print("✅ Embeddings saved to test_embeddings.json")
-    
-    # Try to upload to Pinecone (optional)
-    pinecone_key = os.getenv('PINECONE_API_KEY')
-    if pinecone_key and pinecone_key != 'your_pinecone_api_key_here':
-        print("\n☁️ Uploading to Pinecone...")
-        try:
-            from pinecone import Pinecone
-            
-            pc = Pinecone(api_key=pinecone_key)
-            
-            # Use existing index
-            index_name = "vector-to-prompt"
-            index = pc.Index(index_name)
-            
-            # Prepare vectors for upload
-            vectors = []
-            for item in embeddings:
-                vectors.append({
-                    "id": item['id'],
-                    "values": item['embedding'],
-                    "metadata": {
-                        "prompt": item['prompt'][:500],  # Truncate for metadata limits
-                        "output": item['output'][:500],  # Truncate for metadata limits
-                        "type": "test",
-                        "tokens": item['tokens']
-                    }
-                })
-            
-            # Upload to Pinecone
-            index.upsert(vectors=vectors)
-            print(f"✅ Uploaded {len(vectors)} vectors to Pinecone!")
-            
-            # Test query
-            query_result = index.query(
-                vector=embeddings[0]['embedding'],
-                top_k=3,
-                include_metadata=True
-            )
-            print(f"🔍 Test query returned {len(query_result.matches)} matches")
-            for match in query_result.matches:
-                print(f"   Score: {match.score:.4f} - {match.metadata.get('prompt', 'No prompt')[:100]}...")
-            
-        except ImportError:
-            print("⚠️ Pinecone not available, skipping upload")
-        except Exception as e:
-            print(f"⚠️ Pinecone upload failed: {e}")
-            import traceback
-            traceback.print_exc()
+    # Test single prompt generation
+    result = test_single_prompt_generation()
+    if result["success"]:
+        prompt = result["data"]["prompt"]
+        print(f"✅ Single prompt: {prompt[:60]}...")
     else:
-        print("\n⚠️ Pinecone API key not set, skipping upload")
+        print(f"❌ Single prompt failed: {result['error']}")
     
-    # Calculate cost
-    total_tokens = sum(item['tokens'] for item in embeddings)
-    cost = (total_tokens / 1_000_000) * 0.02
+    # Test text to prompt
+    result = test_text_to_prompt()
+    if result["success"]:
+        prompt = result["data"]["prompt"]
+        print(f"✅ Text to prompt: {prompt[:60]}...")
+    else:
+        print(f"❌ Text to prompt failed: {result['error']}")
     
-    print("\n🎉 Test completed successfully!")
-    print(f"📊 Summary:")
-    print(f"   - Processed: {len(embeddings)} outputs")
-    print(f"   - Generated: {len(embeddings)} embeddings")
-    print(f"   - Dimensions: {len(embeddings[0]['embedding']) if embeddings else 'N/A'}")
-    print(f"   - Total tokens: {total_tokens}")
-    print(f"   - Actual cost: ${cost:.6f}")
+    # Test batch processing
+    result = test_batch_processing()
+    if result["success"]:
+        successful = result["data"]["successful"]
+        total = result["data"]["total_processed"]
+        print(f"✅ Batch processing: {successful}/{total} successful")
+    else:
+        print(f"❌ Batch processing failed: {result['error']}")
+    
+    print("Testing completed!")
+
 
 if __name__ == "__main__":
     main() 

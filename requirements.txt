@@ -3,7 +3,7 @@ torch>=2.0.0
 transformers>=4.30.0
 tokenizers>=0.13.0
 datasets>=2.10.0
-numpy>=1.21.0
+numpy<2.0.0,>=1.21.0
 pandas>=1.5.0
 scikit-learn>=1.2.0
 
@@ -13,46 +13,38 @@ sentence-transformers>=2.2.0
 
 # Vector Database
 pinecone-client>=2.2.0
-
-# Alternative Vector Storage
-faiss-cpu>=1.7.0  # For local fallback
-chromadb>=0.4.0   # Alternative vector DB
+faiss-cpu>=1.7.0
+chromadb>=0.4.0
 
 # API Framework
 fastapi>=0.100.0
 uvicorn>=0.22.0
 pydantic>=2.0.0
-pydantic-settings>=2.0.0
-slowapi>=0.1.7      # For rate limiting
-rouge>=1.0.1        # For ROUGE metrics
+slowapi>=0.1.7
+rouge>=1.0.1
 
 # Data Processing
-pyarrow>=12.0.0   # For parquet support
-jsonlines>=3.1.0  # For JSONL support
-
-# Visualization and Analysis
+pyarrow>=12.0.0
+jsonlines>=3.1.0
 matplotlib>=3.5.0
 seaborn>=0.11.0
 plotly>=5.0.0
-scikit-learn>=1.2.0  # For t-SNE, PCA
-wordcloud>=1.9.0     # For word cloud generation
+wordcloud>=1.9.0
 
 # Configuration and Environment
 python-dotenv>=1.0.0
 pyyaml>=6.0
-click>=8.0.0      # For CLI tools
-
-# Logging and Monitoring
+click>=8.0.0
 loguru>=0.7.0
-rich>=13.0.0      # For beautiful console output
+rich>=13.0.0
 
 # HTTP and Utilities
 httpx>=0.24.0
 requests>=2.28.0
 tqdm>=4.64.0
-nltk>=3.8.1        # For BLEU score computation
-tenacity>=8.2.0    # For retry logic
-aiohttp>=3.8.0     # For async HTTP requests
+nltk>=3.8.1
+tenacity>=8.2.0
+aiohttp>=3.8.0
 
 # Development and Testing
 pytest>=7.0.0
@@ -64,9 +56,4 @@ flake8>=6.0.0
 mypy>=1.0.0
 
 # Deployment
-gunicorn>=21.0.0
-docker>=6.0.0
-
-# Optional: Reinforcement Learning (for advanced features)
-# stable-baselines3>=2.0.0
-# gym>=0.26.0 
+gunicorn>=21.0.0 

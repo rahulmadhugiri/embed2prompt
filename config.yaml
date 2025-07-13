@@ -20,7 +20,7 @@ pinecone:
 
 # Model Configuration
 model:
-  architecture: "t5-small"  # Options: "mlp", "t5-small", "encoder-decoder"
+  architecture: "mlp"  # Options: "mlp", "t5-small", "encoder-decoder"
   max_prompt_length: 512
   max_output_length: 256
   hidden_size: 512

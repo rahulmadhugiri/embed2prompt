@@ -38,7 +38,7 @@ Complete step-by-step guide to train your embeddings-to-prompts model on NVIDIA 
 
 ### 4. Launch Instance
 
-1. Click **"Launch"** 
+1. Click "Launch"
 2. Wait 2-3 minutes for GPU provisioning
 3. Click **"Connect"** when ready
 

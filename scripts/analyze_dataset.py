@@ -31,7 +31,7 @@ def load_config(config_path: str = "config.yaml") -> Dict[str, Any]:
 
 
 def load_dataset(dataset_path: str) -> pd.DataFrame:
-    """Load the alpaca dataset."""
+   
     print(f"Loading dataset from {dataset_path}")
     df = pd.read_csv(dataset_path)
     print(f"Dataset shape: {df.shape}")
